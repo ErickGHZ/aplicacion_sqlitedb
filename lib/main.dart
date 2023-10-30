@@ -1,13 +1,10 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:sqlitedb/convert_utility.dart';
-import 'package:sqlitedb/dbManager.dart';
-import 'package:sqlitedb/student.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
+import 'home_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -16,322 +13,141 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: HomePage(),
+      theme: ThemeData(brightness: Brightness.light),
+      darkTheme: ThemeData(brightness: Brightness.dark),
+      themeMode: ThemeMode.dark,
+      home: FingerPrint(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class FingerPrint extends StatefulWidget {
+  const FingerPrint({Key? key}) : super(key: key);
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<FingerPrint> createState() => _FingerPrintState();
 }
 
-class _HomePageState extends State<HomePage> {
-  Future<List<Student>>? Studentss;
-  TextEditingController telController = TextEditingController();
-  TextEditingController nameController = TextEditingController();
-  TextEditingController apepaController = TextEditingController();
-  TextEditingController apemaController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController controlNumController = TextEditingController();
-  String? tel = '';
-  String? name = '';
-  String? email = '';
-  String? apepa = '';
-  String? apema = '';
-  String? photoname = '';
+class _FingerPrintState extends State<FingerPrint> {
+  LocalAuthentication auth = LocalAuthentication();
+  bool _canCheckBiometric = false;
+  List<BiometricType> _availableBiometric = [];
+  String authorized = "Not Authorized";
 
-  //Update control
-  int? currentUserId;
-  final formKey = GlobalKey<FormState>();
-  late var dbHelper;
-  late bool isUpdating;
-
-  //Metodos de usuario
-  refreshList() {
-    setState(() {
-      Studentss = dbHelper.getStudents();
-    });
-  }
-
-  pickImageFromGallery() {
-    ImagePicker imagePicker = ImagePicker();
-    imagePicker
-        .pickImage(source: ImageSource.gallery, maxHeight: 480, maxWidth: 640)
-        .then((value) async {
-      Uint8List? imageBytes = await value!.readAsBytes();
-      setState(() {
-        photoname = Utility.base64String(imageBytes!);
-      });
-    });
-  }
-
-  clearFields() {
-    telController.text = '';
-    nameController.text = '';
-    apepaController.text = '';
-    apemaController.text = '';
-    emailController.text = '';
-    controlNumController.text = '';
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    dbHelper = DBManager();
-    refreshList();
-    isUpdating = false;
-  }
-
-  Widget userForm() {
-    return Form(
-      key: formKey,
-      child: Padding(
-        padding: EdgeInsets.all(10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          verticalDirection: VerticalDirection.down,
-          children: [
-            const SizedBox(height: 10),
-            //TextFormField(
-            //controller: controlNumController,
-            //keyboardType: TextInputType.number,
-            //decoration: const InputDecoration(
-            //labelText: 'Control Number',
-            // ),
-            //validator: (val) => val!.isEmpty ? 'Enter Control Number' : null,
-            //onSaved: (val) => controlNumController.text = val!,
-            // ),
-            TextFormField(
-              controller: nameController,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Por favor pon tu nombre";
-                }
-                if (value.length > 50) {
-                  return "El nombre no debe tener más de 50 caracteres.";
-                }
-                return null;
-              },
-              onSaved: (val) => name = val!,
-            ),
-            TextFormField(
-              controller: apepaController,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Apellido Paterno',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Por favor pon tu apellido paterno";
-                }
-                if (value.length > 50) {
-                  return "El apellido paterno no debe tener más de 50 caracteres.";
-                }
-                return null;
-              },
-              onSaved: (val) => apepa = val!,
-            ),
-            TextFormField(
-              controller: apemaController,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Apellido Materno',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Por favor pon tu apellido materno";
-                }
-                if (value.length > 50) {
-                  return "El apellido materno no debe tener más de 50 caracteres.";
-                }
-                return null;
-              },
-              onSaved: (val) => apema = val!,
-            ),
-            TextFormField(
-              controller: telController,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Telefono',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Por favor pon tu telefono";
-                }
-                if (value.length != 10) {
-                  return "Tu numero de telefono debe ser igual a 10 digitos";
-                }
-                if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
-                  return "Tu número debe contener solo dígitos numéricos";
-                }
-                return null;
-              },
-              onSaved: (val) => tel = val!,
-            ),
-            TextFormField(
-              controller: emailController,
-              keyboardType: TextInputType.text,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return "Por favor pon tu email";
-                }
-                if (!RegExp(
-                    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
-                    .hasMatch(value)) {
-                  return "Por favor pon tu email de forma correcta";
-                }
-                if (value.length > 100) {
-                  return "El email no debe tener más de 100 caracteres.";
-                }
-                return null;
-              },
-              onSaved: (val) => email = val!,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                MaterialButton(
-                  onPressed: validate,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Colors.red)),
-                  child: Text(isUpdating ? "Actualizar" : "Insertar"),
-                ),
-                MaterialButton(
-                    onPressed: (){
-                      pickImageFromGallery();
-                    },
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Colors.green)),
-                  child: const Text("Seleccionar imagen"),
-                )
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  SingleChildScrollView userDataTable(List<Student>? Studentss){
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Photo')),
-          DataColumn(label: Text('Name')),
-          DataColumn(label: Text('Paterno')),
-          DataColumn(label: Text('Materno')),
-          DataColumn(label: Text('E-mail')),
-          DataColumn(label: Text('Telefono')),
-          DataColumn(label: Text('Delete')),
-        ],
-        rows: Studentss!.map((student)=>DataRow(cells: [
-          DataCell(Container(
-            width: 80,
-            height: 120,
-            child: Utility.ImageFromBase64String(student.photoName!),
-          )),
-          DataCell(Text(student.name!), onTap: (){
-            setState(() {
-              isUpdating = true;
-              currentUserId = student.controlNum;
-            });
-            nameController.text = student.name!;
-            apepaController.text = student.apepa!;
-            apemaController.text = student.apema!;
-            emailController.text = student.email!;
-            telController.text = student.tel!;
-          }),
-          DataCell(Text(student.apepa!)),
-          DataCell(Text(student.apema!)),
-          DataCell(Text(student.email!)),
-          DataCell(Text(student.tel!)),
-          DataCell(IconButton(
-            onPressed: () {
-              dbHelper.delete(student.controlNum);
-              refreshList();
-            },
-            icon: const Icon(Icons.delete),
-          ))
-        ])).toList(),
-      ),
-    );
-  }
-
-  Widget list (){
-    return Expanded(
-        child: SingleChildScrollView(
-      child: FutureBuilder(
-        future: Studentss,
-        builder: (context, AsyncSnapshot<dynamic> snapshot){
-          if(snapshot.hasData){
-            print(snapshot.data);
-            return userDataTable(snapshot.data);
-          }
-          if(!snapshot.hasData){
-            print("Data Not Found");
-          }
-          return const CircularProgressIndicator();
-        }),
-    ));
-  }
-
-  validate(){
-    if(formKey.currentState!.validate()){
-      formKey.currentState!.save();
-      if(isUpdating){
-        Student student = Student(
-          controlNum: currentUserId,
-          name: name,
-          apepa: apepa,
-          apema: apema,
-          email: email,
-          tel: tel,
-          photoName: photoname);
-        dbHelper.update(student);
-        isUpdating = false;
-      } else{
-        Student student = Student(
-            controlNum: null,
-            name: name,
-            apepa: apepa,
-            apema: apema,
-            email: email,
-            tel: tel,
-            photoName: photoname);
-        dbHelper.save(student);
-      }
-      clearFields();
-      refreshList();
+  Future<void> _CheckBiometric() async {
+    bool canCheckBiometric = false;
+    try {
+      canCheckBiometric = await auth.canCheckBiometrics;
+    } on PlatformException catch (e) {
+      print(e);
     }
+    if (!mounted) return;
+
+    setState(() {
+      _canCheckBiometric = canCheckBiometric;
+    });
+  }
+
+  Future<void> _getAvailableBiometrics() async {
+    List<BiometricType> availableBiometric = [];
+    try {
+      availableBiometric = await auth.getAvailableBiometrics();
+    } on PlatformException catch (e) {
+      print(e);
+    }
+    if (!mounted) return;
+
+    setState(() {
+      _availableBiometric = availableBiometric;
+    });
+  }
+
+  Future<void> _authenticate() async {
+    bool authenticated = false;
+    try {
+      authenticated = await auth.authenticate(
+          localizedReason: "Coloca tu dedo en el lector de huellas ",
+          options: const AuthenticationOptions(
+            useErrorDialogs: true,
+            stickyAuth: true,
+          ));
+    } on PlatformException catch (e) {
+      print(e);
+    }
+    if (!mounted) return;
+
+    setState(() {
+      authorized =
+          authenticated ? "Autenticado con éxito" : "Falla al leer la huella";
+
+      if (authenticated) {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => HomePage()));
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('SQLite DB'),
-        centerTitle: true,
+    return SafeArea(
+        child: Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: <Widget>[
+            Center(
+              child: Text(
+                "Login",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 48.0,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.symmetric(
+                vertical: 50.0,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Image.asset(
+                    'assets/dedo.png',
+                    width: 200,
+                    height: 200,
+                  ),
+                  SizedBox(
+                    height: 50,
+                  ),
+                  Text("Acceso solo con huella digital"),
+                  Container(
+                    margin: EdgeInsets.symmetric(
+                      vertical: 15.0,
+                    ),
+                    width: double.infinity,
+                    child: MaterialButton(
+                      elevation: 0.0,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                      onPressed: _authenticate,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            vertical: 14.0, horizontal: 24.0),
+                        child: Text(
+                          "Login",
+                          style: TextStyle(color: Colors.blue),
+                        ),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        verticalDirection: VerticalDirection.down,
-        children: [userForm(),list()],
-      ),
-    );
+    ));
   }
 }
