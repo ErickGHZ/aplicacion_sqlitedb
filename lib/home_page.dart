@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sqlitedb/convert_utility.dart';
 import 'package:sqlitedb/dbManager.dart';
 import 'package:sqlitedb/student.dart';
+import 'package:sqlitedb/info_page.dart';
+
 
 
 
@@ -61,6 +63,7 @@ class _HomePageState extends State<HomePage> {
     apemaController.text = '';
     emailController.text = '';
     controlNumController.text = '';
+    photoname = '';
   }
 
   @override
@@ -197,7 +200,7 @@ class _HomePageState extends State<HomePage> {
                 MaterialButton(
                   onPressed: (){
                     pickImageFromGallery();
-                  },
+                  },  
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: const BorderSide(color: Colors.green)),
@@ -226,10 +229,17 @@ class _HomePageState extends State<HomePage> {
         ],
         rows: Studentss!.map((student)=>DataRow(cells: [
           DataCell(Container(
-            width: 80,
-            height: 120,
-            child: Utility.ImageFromBase64String(student.photoName!),
-          )),
+          width: 80,
+          height: 120,
+          child: Utility.ImageFromBase64String(student.photoName!),
+          ), onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => InfoPage(student: student),
+              ),
+            );
+          },
+          ),
           DataCell(Text(student.name!), onTap: (){
             setState(() {
               isUpdating = true;
@@ -275,10 +285,16 @@ class _HomePageState extends State<HomePage> {
         ));
   }
 
-  validate(){
-    if(formKey.currentState!.validate()){
+  validate() {
+    if (formKey.currentState!.validate()) {
       formKey.currentState!.save();
-      if(isUpdating){
+      if (photoname == '') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Por favor, seleccione una foto antes de guardar.'),
+        ));
+        return;
+      }
+      else if(isUpdating) {
         Student student = Student(
             controlNum: currentUserId,
             name: name,
@@ -289,7 +305,7 @@ class _HomePageState extends State<HomePage> {
             photoName: photoname);
         dbHelper.update(student);
         isUpdating = false;
-      } else{
+      } else {
         Student student = Student(
             controlNum: null,
             name: name,
@@ -304,6 +320,7 @@ class _HomePageState extends State<HomePage> {
       refreshList();
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
