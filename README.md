@@ -1,6 +1,4 @@
-# sqlitedb
-
-A new Flutter project.
+# Aplicacion formulario con base de datos sqlite
 
 ## Getting Started
 
